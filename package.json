@@ -1,0 +1,46 @@
+{
+  "name": "ludok-count",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@react-native-community/datetimepicker": "9.1.0",
+    "drizzle-orm": "^0.45.3",
+    "expo": "~57.0.25",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.19",
+    "expo-document-picker": "~57.0.2",
+    "expo-file-system": "~57.0.7",
+    "expo-linking": "~57.0.11",
+    "expo-navigation-bar": "~57.0.2",
+    "expo-network": "~57.0.2",
+    "expo-router": "~57.0.23",
+    "expo-sharing": "~57.0.22",
+    "expo-splash-screen": "~57.0.9",
+    "expo-sqlite": "~57.0.3",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-url-polyfill": "^4.0.0"
+  },
+  "devDependencies": {
+    "@libsql/client": "^0.18.0",
+    "@types/node": "^26.6.3",
+    "@types/react": "~19.2.2",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p verify",
+    "verify:data": "tsx verify/data.ts",
+    "verify:library": "tsx verify/library.ts",
+    "verify:migration": "tsx verify/migration.ts",
+    "verify": "npm run verify:data && npm run verify:library && npm run verify:migration",
+    "build:apk": "bash scripts/build-apk.sh"
+  },
+  "private": true
+}
