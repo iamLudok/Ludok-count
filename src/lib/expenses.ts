@@ -128,6 +128,7 @@ export function buildShares(
   amount: number,
   mode: SplitMode,
   parts: SplitPart[],
+  paidBy: string,
 ): { personId: string; weight: number; amount: number }[] {
   if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('El importe tiene que ser mayor que 0.')
   const seen = new Set<string>()
@@ -154,7 +155,11 @@ export function buildShares(
 
   const weights = active.map((p) => (mode === 'equal' ? 1 : Math.trunc(p.value)))
   if (weights.some((w) => w < 1)) throw new Error('Las partes tienen que ser números enteros.')
-  const amounts = splitByWeights(amount, weights)
+  // El céntimo (o los pocos que sobren) se los queda quien pagó, no un
+  // tercero al azar: es quien puso el dinero, y el resto no debe nunca menos
+  // de su parte exacta redondeada hacia arriba.
+  const favor = active.findIndex((p) => p.personId === paidBy)
+  const amounts = splitByWeights(amount, weights, favor >= 0 ? favor : undefined)
   return active.map((p, i) => ({ personId: p.personId, weight: weights[i], amount: amounts[i] }))
 }
 
@@ -166,7 +171,7 @@ function cleanTitle(title: string): string {
 
 export async function addExpense(input: ExpenseInput): Promise<string> {
   const title = cleanTitle(input.title)
-  const shares = buildShares(input.amount, input.splitMode, input.parts)
+  const shares = buildShares(input.amount, input.splitMode, input.parts, input.paidBy)
   const id = newId()
   const now = Date.now()
   await getDb().transaction(async (tx: AppDb) => {
@@ -189,7 +194,7 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
 /** Edita un gasto: se reescriben sus repartos enteros, en la misma transacción. */
 export async function updateExpense(id: string, input: Omit<ExpenseInput, 'groupId'>): Promise<void> {
   const title = cleanTitle(input.title)
-  const shares = buildShares(input.amount, input.splitMode, input.parts)
+  const shares = buildShares(input.amount, input.splitMode, input.parts, input.paidBy)
   await getDb().transaction(async (tx: AppDb) => {
     await tx
       .update(S.expenses)

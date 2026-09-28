@@ -6,10 +6,13 @@ import { Txt } from '../../src/ui/Text'
 import { Button } from '../../src/ui/Button'
 import { Card, Label } from '../../src/ui/Card'
 import { Field } from '../../src/ui/Field'
+import { Pills } from '../../src/ui/Pills'
 import { useToast } from '../../src/ui/Toast'
 import { space } from '../../src/ui/theme'
 import { usePeople, useSushi, useDrinks, useExpenses } from '../../src/hooks/useData'
+import { useSettings } from '../../src/hooks/useSettings'
 import { addPerson } from '../../src/lib/people'
+import { updateSettings } from '../../src/lib/settings'
 import { sushiStatsByPerson } from '../../src/lib/sushi'
 import { drinkStatsByPerson } from '../../src/lib/drinks'
 import { balances } from '../../src/lib/expenses'
@@ -20,6 +23,7 @@ export default function CrewScreen() {
   const { data: sushi } = useSushi()
   const { data: drinks } = useDrinks()
   const { data: money } = useExpenses()
+  const settings = useSettings()
   const toast = useToast()
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +67,7 @@ export default function CrewScreen() {
         <View style={styles.row}>
           <Txt variant="section" tone={faded ? 'muted' : 'fg'} style={{ flex: 1 }} numberOfLines={1}>
             {personName}
+            {id === settings.mePersonId ? ' · Tú' : ''}
           </Txt>
           {b !== 0 ? (
             <Txt variant="amount" tone={b > 0 ? 'credit' : 'debt'}>
@@ -109,6 +114,24 @@ export default function CrewScreen() {
             Aún no hay nadie. Añade a la gente de la cuadrilla para poder apuntarles sushi, rondas y gastos.
           </Txt>
         ) : null}
+
+        {active.length ? (
+          <Card>
+            <Txt variant="label" tone="muted">
+              ¿Quién eres tú?
+            </Txt>
+            <Txt variant="small" tone="muted">
+              Para ver «mis gastos» en cada grupo. Tócate para marcarte, o vuelve a tocar para quitarlo.
+            </Txt>
+            <Pills
+              single
+              options={active.map((p) => ({ key: p.id, label: p.name }))}
+              selected={settings.mePersonId}
+              onToggle={(pid) => updateSettings({ mePersonId: pid === settings.mePersonId ? undefined : pid })}
+            />
+          </Card>
+        ) : null}
+
         {active.map((p) => card(p.id, p.name))}
         {active.length ? (
           <Txt variant="small" tone="faint">

@@ -136,6 +136,32 @@ export interface ExpenseShare {
   amount: number
 }
 
+/* --- Mus -------------------------------------------------------------------- */
+
+/**
+ * Una partida de mus, siempre por parejas fijas (2 contra 2). Los cuatro ids
+ * se guardan en sus propias columnas y no como filas sueltas (al revés que
+ * sushi o bebida): una partida SIEMPRE tiene exactamente cuatro jugadores, dos
+ * por equipo, así que no hace falta una tabla de asistentes.
+ */
+export interface MusMatch {
+  id: string
+  date: number
+  /** Piedras para ganar. 40 es lo más habitual, pero se puede cambiar. */
+  target: number
+  team1Player1: string
+  team1Player2: string
+  team2Player1: string
+  team2Player2: string
+  team1Score: number
+  team2Score: number
+  /** Ausente mientras se juega. 1 o 2 en cuanto un equipo llega a `target`. */
+  winner?: 1 | 2
+  note?: string
+  createdAt: number
+  finishedAt?: number
+}
+
 /* --- Ajustes y copia ------------------------------------------------------ */
 
 export type ThemePref = 'dark' | 'light' | 'system'
@@ -145,6 +171,8 @@ export interface Settings {
   theme: ThemePref
   lastBackup: number
   onboardedAt?: number
+  /** Quién eres tú en la cuadrilla, elegido en Cuadrilla. Para «mis gastos». */
+  mePersonId?: string
   nextcloudUrl?: string
   nextcloudUser?: string
   /** No sale nunca en las copias: ver `backupCore.exportAll`. */
@@ -170,6 +198,7 @@ export interface BackupFile {
   groupMembers: GroupMember[]
   expenses: Expense[]
   expenseShares: ExpenseShare[]
+  musMatches: MusMatch[]
   /** Sin la contraseña de Nextcloud, que no se exporta nunca. */
   settings?: Omit<Settings, 'nextcloudPassword'>
 }

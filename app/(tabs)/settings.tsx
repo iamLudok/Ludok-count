@@ -8,7 +8,7 @@ import { Chips } from '../../src/ui/Chips'
 import { usePalette } from '../../src/ui/ThemeProvider'
 import { radius, space } from '../../src/ui/theme'
 import { useSettings } from '../../src/hooks/useSettings'
-import { usePeople, useSushi, useDrinks, useExpenses } from '../../src/hooks/useData'
+import { usePeople, useSushi, useDrinks, useExpenses, useMus } from '../../src/hooks/useData'
 import { updateSettings } from '../../src/lib/settings'
 import { shareBackup, pickJsonFile, importBackup, daysSinceBackup } from '../../src/lib/backup'
 import { NextcloudSettings } from '../../src/components/NextcloudSettings'
@@ -27,6 +27,7 @@ export default function SettingsScreen() {
   const { data: sushi } = useSushi()
   const { data: drinks } = useDrinks()
   const { data: money } = useExpenses()
+  const { data: mus } = useMus()
   const [busy, setBusy] = useState(false)
 
   const days = daysSinceBackup(settings.lastBackup)
@@ -72,7 +73,7 @@ export default function SettingsScreen() {
       const res = await importBackup(raw, mode)
       Alert.alert(
         'Importado',
-        `${res.people} personas, ${res.sushiSessions} sesiones de sushi, ${res.drinkSessions} de bebida y ${res.expenses} gastos.`,
+        `${res.people} personas, ${res.sushiSessions} sesiones de sushi, ${res.drinkSessions} de bebida, ${res.expenses} gastos y ${res.musMatches} partidas de mus.`,
       )
     } catch (e) {
       Alert.alert('Error al importar', e instanceof Error ? e.message : 'Error desconocido')
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
             <Row label="Sesiones de sushi" value={String(sushi.sessions.length)} />
             <Row label="Sesiones de bebida" value={String(drinks.sessions.length)} />
             <Row label="Gastos y pagos" value={String(money.expenses.length)} />
+            <Row label="Partidas de mus" value={String(mus.length)} />
             <Row label="Última copia" value={lastBackupText} />
           </View>
           <Button title="Exportar copia" kind="primary" onPress={doExport} disabled={busy} />

@@ -52,22 +52,30 @@ export function moneyToInput(cents: number): string {
 }
 
 /**
- * Reparte `total` céntimos según unos pesos, sin perder ni inventar ni un
- * céntimo: primero la parte entera de cada uno y después los céntimos que
- * sobran, a quien más «decimal» se quedó sin cobrar (a igualdad, al primero de
- * la lista). 10 € entre 3 = 3,34 + 3,33 + 3,33, y la suma es siempre el total.
+ * Reparte `total` céntimos según unos pesos, sin perder ni inventar ni uno:
+ * primero la parte entera de cada uno (redondeada hacia abajo) y después los
+ * céntimos que sobran, a quien más «decimal» se quedó sin cobrar (a igualdad,
+ * al primero de la lista).
+ *
+ * `favor` es el índice de quien pagó: nunca recibe ninguno de esos céntimos
+ * de más, así que su parte queda siempre redondeada hacia abajo (o exacta) y
+ * el resto paga, como mucho, un céntimo de más — nunca menos. 110 € entre 6
+ * quedan en 18,33 € limpios para cinco y 18,35 € para quien pagó, que es
+ * quien puso el dinero y a quien le toca salir ganando el redondeo, no un
+ * tercero al azar.
+ *
+ * Siempre cabe: entre como mucho `n − 1` personas (todas menos quien pagó)
+ * nunca sobran más de `n − 1` céntimos que repartir.
  */
-export function splitByWeights(total: number, weights: number[]): number[] {
+export function splitByWeights(total: number, weights: number[], favor?: number): number[] {
   const sum = weights.reduce((a, w) => a + w, 0)
   if (sum <= 0) return weights.map(() => 0)
   const exact = weights.map((w) => (total * w) / sum)
   const out = exact.map(Math.floor)
-  // Siempre sobran menos céntimos que personas con peso, así que nadie
-  // recibe más de uno de propina.
   const left = total - out.reduce((a, b) => a + b, 0)
   const order = exact
     .map((x, i) => ({ i, frac: x - Math.floor(x) }))
-    .filter(({ i }) => weights[i] > 0)
+    .filter(({ i }) => weights[i] > 0 && i !== favor)
     .sort((a, b) => b.frac - a.frac || a.i - b.i)
   for (let k = 0; k < left; k++) out[order[k % order.length].i]++
   return out

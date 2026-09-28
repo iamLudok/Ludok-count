@@ -69,6 +69,7 @@ export const TABLES: TableSpec[] = [
   { key: 'groupMembers', table: S.groupMembers, fromRow: R.rowToGroupMember, toRow: R.groupMemberToRow },
   { key: 'expenses', table: S.expenses, fromRow: R.rowToExpense, toRow: R.expenseToRow },
   { key: 'expenseShares', table: S.expenseShares, fromRow: R.rowToShare, toRow: R.shareToRow },
+  { key: 'musMatches', table: S.musMatches, fromRow: R.rowToMusMatch, toRow: R.musMatchToRow },
 ]
 
 /** Serializa toda la base de datos a un objeto de copia. */
@@ -157,6 +158,7 @@ export async function importBackup(
     nextcloudUser: s?.nextcloudUser || current.nextcloudUser,
     nextcloudFolder: s?.nextcloudFolder || current.nextcloudFolder,
     autoBackup: s?.autoBackup ?? current.autoBackup,
+    mePersonId: s?.mePersonId || current.mePersonId,
     onboardedAt: current.onboardedAt ?? s?.onboardedAt ?? Date.now(),
     id: 'app',
   })

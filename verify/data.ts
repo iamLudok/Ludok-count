@@ -64,6 +64,7 @@ const backup: BackupFile = {
     { id: 'p-iker', name: 'Iker', addedAt: 2 },
     // Archivado: el campo opcional presente.
     { id: 'p-mikel', name: 'Mikel', addedAt: 3, archivedAt: 1760000000500 },
+    { id: 'p-nerea', name: 'Nerea', addedAt: 4 },
   ],
   sushiSessions: [
     { id: 's1', date: 1759000000000, place: 'Sushi Bar Donosti', note: 'Récord de Iker', createdAt: 10 },
@@ -129,11 +130,43 @@ const backup: BackupFile = {
     { id: 'es2', expenseId: 'e1', personId: 'p-iker', weight: 1, amount: 3000 },
     { id: 'es3', expenseId: 'e2', personId: 'p-ane', weight: 1000, amount: 1000 },
   ],
+  musMatches: [
+    {
+      // Cerrada, con nota: los huecos importan al revés también.
+      id: 'm1',
+      date: 1759000000000,
+      target: 40,
+      team1Player1: 'p-ane',
+      team1Player2: 'p-iker',
+      team2Player1: 'p-mikel',
+      team2Player2: 'p-nerea',
+      team1Score: 40,
+      team2Score: 28,
+      winner: 1,
+      note: 'Órdago en la última',
+      createdAt: 1,
+      finishedAt: 1759000900000,
+    },
+    {
+      // En juego: sin ganador ni fecha de cierre, ni nota.
+      id: 'm2',
+      date: 1759500000000,
+      target: 40,
+      team1Player1: 'p-ane',
+      team1Player2: 'p-mikel',
+      team2Player1: 'p-iker',
+      team2Player2: 'p-nerea',
+      team1Score: 12,
+      team2Score: 15,
+      createdAt: 2,
+    },
+  ],
   settings: {
     id: 'app',
     theme: 'dark',
     lastBackup: 1760000000000,
     onboardedAt: 1750000000000,
+    mePersonId: 'p-ane',
     schemaVersion: 1,
   },
 }
@@ -152,7 +185,7 @@ async function main() {
   console.log('\n=== 2. Ida y vuelta, campo a campo ===')
   const db = await freshDb()
   const imported = await importBackup(db, JSON.stringify(backup), 'replace')
-  eq('personas importadas', imported.people, 3)
+  eq('personas importadas', imported.people, 4)
   eq('repartos importados', imported.expenseShares, 3)
   const out = await exportAll(db)
   for (const spec of TABLES) {
@@ -162,6 +195,7 @@ async function main() {
     check(`${spec.key} idéntico`, same, same ? '' : `\n    antes: ${JSON.stringify(before)}\n    ahora: ${JSON.stringify(after)}`)
   }
   eq('tema restaurado', out.settings?.theme, 'dark')
+  eq('quién eres tú restaurado', out.settings?.mePersonId, 'p-ane')
   eq('app correcta', out.app, 'ludok-count')
   eq('schemaVersion exportada', out.schemaVersion, 1)
 
@@ -171,6 +205,11 @@ async function main() {
   const ane = out.people.find((p) => p.id === 'p-ane')!
   check('persona activa sin archivedAt', !('archivedAt' in stripUndef(ane)))
   eq('el que fue y no comió sigue con 0', out.sushiEntries.find((e) => e.id === 'se3')?.pieces, 0)
+  const m2 = out.musMatches.find((m) => m.id === 'm2')!
+  check('partida en juego sin ganador: el campo ni aparece', !('winner' in stripUndef(m2)))
+  check('ni la fecha de cierre', !('finishedAt' in stripUndef(m2)))
+  check('ni la nota', !('note' in stripUndef(m2)))
+  eq('la cerrada sí lleva ganador', out.musMatches.find((m) => m.id === 'm1')?.winner, 1)
   check('el JSON exportado no contiene ningún null', !JSON.stringify(out).includes('null'))
 
   console.log('\n=== 4. Fusionar sin mezclar filas (el fallo de excluded) ===')
@@ -178,7 +217,7 @@ async function main() {
   await importBackup(db2, JSON.stringify(backup), 'replace')
   const edited: BackupFile = {
     ...backup,
-    people: [{ id: 'p-nuevo', name: 'Nerea', addedAt: 9 }],
+    people: [{ id: 'p-nuevo', name: 'Xabier', addedAt: 9 }],
     sushiEntries: [
       { ...backup.sushiEntries[0], pieces: 40 },
       { ...backup.sushiEntries[1], pieces: 70 },
@@ -188,7 +227,7 @@ async function main() {
   }
   await importBackup(db2, JSON.stringify(edited), 'merge')
   const merged = await exportAll(db2)
-  eq('fusionar añade gente sin borrar a nadie', merged.people.length, 4)
+  eq('fusionar añade gente sin borrar a nadie', merged.people.length, 5)
   // Aquí es donde un `set` con valor fijo habría puesto lo mismo en las dos:
   eq('se1 con SUS trozos', merged.sushiEntries.find((e) => e.id === 'se1')?.pieces, 40)
   eq('se2 con SUS trozos', merged.sushiEntries.find((e) => e.id === 'se2')?.pieces, 70)
@@ -211,7 +250,7 @@ async function main() {
   delete partial.expenseShares
   const r6 = await importBackup(await freshDb(), JSON.stringify(partial), 'replace')
   eq('tabla ausente = 0 filas', r6.drinkCounts, 0)
-  eq('el resto entra', r6.people, 3)
+  eq('el resto entra', r6.people, 4)
 
   console.log('\n=== 7. Volumen grande (troceado de inserts) ===')
   const db4 = await freshDb()
@@ -262,7 +301,7 @@ async function main() {
   await importBackup(db5, JSON.stringify(backup), 'replace')
   const broken = { ...backup, people: [{ id: 'x', name: null, addedAt: 1 }] }
   await rejects('una fila rota', async () => importBackup(db5, JSON.stringify(broken), 'replace'))
-  eq('y lo que había sigue entero', (await exportAll(db5)).people.length, 3)
+  eq('y lo que había sigue entero', (await exportAll(db5)).people.length, 4)
 
   console.log('\n=== 9. La contraseña de Nextcloud NO sale en las copias ===')
   const dbNc = await freshDb()

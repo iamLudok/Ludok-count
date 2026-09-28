@@ -99,7 +99,7 @@ async function main() {
   const v = await fresh.execute('PRAGMA user_version')
   eq('user_version al día', Number(v.rows[0]?.user_version), DB_VERSION)
   const tables = await fresh.execute("SELECT count(*) AS n FROM sqlite_master WHERE type='table'")
-  eq('doce tablas', Number(tables.rows[0]?.n), 12)
+  eq('trece tablas', Number(tables.rows[0]?.n), 13)
 
   console.log('\n=== 2. Instalación de la v1 CON DATOS: se migra sin perder nada ===')
   const old = createClient({ url: `file:${tmpFile('old')}` })
@@ -139,7 +139,25 @@ async function main() {
   const b = await shape(old)
   check('esquema idéntico', a === b, a === b ? '' : `\n--- nueva ---\n${a}\n--- migrada ---\n${b}`)
 
-  console.log('\n=== 4. Migrar dos veces no rompe nada ===')
+  console.log('\n=== 4. El mus se crea al migrar desde la v1, que no lo tenía ===')
+  const musTables = await old.execute("SELECT name FROM sqlite_master WHERE type='table'")
+  check('existe la tabla mus_matches', musTables.rows.map((r) => String(r.name)).includes('mus_matches'))
+  const musIdx = await old.execute("SELECT name FROM sqlite_master WHERE type='index'")
+  check('con su índice por fecha', musIdx.rows.map((r) => String(r.name)).includes('mus_matches_date_idx'))
+  // La tabla nace vacía: no había partidas de mus antes de que existiera el mus.
+  const musCount = await old.execute('SELECT count(*) AS n FROM mus_matches')
+  eq('y sin ninguna fila', Number(musCount.rows[0]?.n), 0)
+
+  console.log('\n=== 5. «Quién eres tú» se añade al migrar desde la v1 ===')
+  const settingsCols = await old.execute('PRAGMA table_info(settings)')
+  check(
+    'settings tiene mePersonId',
+    settingsCols.rows.map((c) => String(c.name)).includes('mePersonId'),
+  )
+  const meVal = await old.execute('SELECT mePersonId FROM settings')
+  eq('arranca sin nadie marcado', meVal.rows[0]?.mePersonId, null)
+
+  console.log('\n=== 6. Migrar dos veces no rompe nada ===')
   await migrate(old)
   const again = await old.execute('SELECT count(*) AS n FROM sushi_entries')
   eq('sigue habiendo una entrada', Number(again.rows[0]?.n), 1)

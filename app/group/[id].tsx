@@ -224,7 +224,9 @@ export default function GroupScreen() {
                 ))}
                 <Txt variant="small" tone="faint">
                   Son los mínimos pagos para que todos queden a cero: si A le debe a B y B a C, A le paga
-                  directamente a C.
+                  directamente a C. Cuando un reparto a partes iguales no da un número exacto de
+                  céntimos (110 € entre 6, por ejemplo), el céntimo de más se lo queda quien pagó: el
+                  resto nunca paga de menos, pero tampoco de más que los demás.
                 </Txt>
               </>
             )}

@@ -98,7 +98,7 @@ export default function ExpenseForm() {
   const preview = ((): { shares?: Map<string, number>; error?: string } => {
     if (amount === null) return { error: amountText.trim() ? 'Importe no válido.' : 'Pon el importe.' }
     try {
-      return { shares: new Map(buildShares(amount, mode, splitParts).map((s) => [s.personId, s.amount])) }
+      return { shares: new Map(buildShares(amount, mode, splitParts, paidBy ?? '').map((s) => [s.personId, s.amount])) }
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Reparto no válido.' }
     }

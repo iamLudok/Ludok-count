@@ -9,7 +9,7 @@ import { radius } from '../../src/ui/theme'
  * bordes en vez de emojis: en «Sala oscura» la interfaz es monocroma, y un
  * emoji a color rompería justo eso.
  */
-type Shape = 'sushi' | 'drinks' | 'expenses' | 'crew' | 'settings'
+type Shape = 'sushi' | 'drinks' | 'mus' | 'expenses' | 'crew' | 'settings'
 
 function Icon({ shape, color }: { shape: Shape; color: ColorValue }) {
   if (shape === 'sushi') {
@@ -28,6 +28,15 @@ function Icon({ shape, color }: { shape: Shape; color: ColorValue }) {
         <View style={[styles.glass, { borderColor: color }]}>
           <View style={[styles.liquid, { backgroundColor: color }]} />
         </View>
+      </View>
+    )
+  }
+  if (shape === 'mus') {
+    // Dos naipes superpuestos, uno ligeramente girado.
+    return (
+      <View style={styles.box}>
+        <View style={[styles.card, { borderColor: color, transform: [{ rotate: '-8deg' }] }]} />
+        <View style={[styles.card, { borderColor: color, transform: [{ rotate: '8deg' }] }]} />
       </View>
     )
   }
@@ -93,6 +102,10 @@ export default function TabsLayout() {
         options={{ title: 'Bebida', tabBarIcon: ({ color }) => <Icon shape="drinks" color={color} /> }}
       />
       <Tabs.Screen
+        name="mus"
+        options={{ title: 'Mus', tabBarIcon: ({ color }) => <Icon shape="mus" color={color} /> }}
+      />
+      <Tabs.Screen
         name="expenses"
         options={{ title: 'Gastos', tabBarIcon: ({ color }) => <Icon shape="expenses" color={color} /> }}
       />
@@ -123,6 +136,7 @@ const styles = StyleSheet.create({
     padding: 1.5,
   },
   liquid: { height: 7, borderRadius: 1 },
+  card: { position: 'absolute', width: 13, height: 17, borderWidth: 2, borderRadius: 3 },
   bill: { position: 'absolute', width: 16, height: 10, borderWidth: 2, borderRadius: 2 },
   heads: { flexDirection: 'row', gap: 1.5 },
   head: { width: 6, height: 6, borderRadius: radius.pill },

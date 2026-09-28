@@ -17,6 +17,7 @@ import type {
   GroupMember,
   Expense,
   ExpenseShare,
+  MusMatch,
 } from '../types'
 
 /**
@@ -119,6 +120,11 @@ export function useGroup(groupId: string | undefined): Query<{
   return { data, ready: all.ready }
 }
 
+/** Todas las partidas de mus, en juego y cerradas. */
+export function useMus(): Query<MusMatch[]> {
+  return useTable(db.select().from(S.musMatches), R.rowToMusMatch)
+}
+
 /** Una sola fila de una tabla por id (para fichas). */
 export function useSushiSession(id: string | undefined): SushiSession | null | undefined {
   const { data, updatedAt } = useLiveQuery(
@@ -138,4 +144,11 @@ export function useDrinkSession(id: string | undefined): DrinkSession | null | u
   if (!id) return null
   if (updatedAt === undefined) return undefined
   return data[0] ? R.rowToDrinkSession(data[0]) : null
+}
+
+export function useMusMatch(id: string | undefined): MusMatch | null | undefined {
+  const { data, updatedAt } = useLiveQuery(db.select().from(S.musMatches).where(eq(S.musMatches.id, id ?? '')), [id])
+  if (!id) return null
+  if (updatedAt === undefined) return undefined
+  return data[0] ? R.rowToMusMatch(data[0]) : null
 }

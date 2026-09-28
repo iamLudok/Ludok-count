@@ -4,6 +4,7 @@ import { getDb } from './dbRef'
 import { newId } from './ids'
 import * as S from './schema'
 import { rowToPerson } from './rows'
+import { getSettings, updateSettings } from './settings'
 import type { Person } from '../types'
 
 /**
@@ -119,6 +120,8 @@ export async function personUsage(id: string): Promise<number> {
 export async function removePerson(id: string): Promise<'deleted' | 'archived'> {
   if ((await personUsage(id)) === 0) {
     await getDb().delete(S.people).where(eq(S.people.id, id))
+    // Si era «tú», no dejarlo apuntando a alguien que ya no existe.
+    if ((await getSettings()).mePersonId === id) await updateSettings({ mePersonId: undefined })
     return 'deleted'
   }
   await setPersonArchived(id, true)

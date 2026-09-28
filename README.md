@@ -27,6 +27,7 @@ Todo lo demás va después.
 | Sushi | Sesiones de buffet | Cada día, quién fue y cuántos trozos se comió cada uno. Clasificación por media, total y mejor día; récord absoluto |
 | Bebida | Sesiones de bebida | Contador por persona **y por tipo** (chupito, cerveza, cubata…, editables). Botón de «ronda para todos» |
 | Gastos | Grupos de gastos | Quién paga qué y entre quién se reparte: a partes iguales, por partes o por importes exactos. Saldos y pagos mínimos para quedar en paz |
+| Mus | Partidas por parejas | Marcador en vivo a dos bandas (2 contra 2), con «+1» por pareja y meta de piedras configurable (40 por defecto). Se cierra sola al llegar a la meta; historial y clasificación por partidas ganadas |
 
 ### No todos van el mismo día
 
@@ -35,10 +36,23 @@ Cada sesión tiene sus asistentes. Que alguien **esté** en una sesión es lo qu
 va por media por defecto justamente por esto: el total premia a quien más veces va, no a quien más
 come.
 
+### El mus, por parejas fijas
+
+Cada partida enfrenta a dos parejas de siempre (2 contra 2): se eligen las cuatro personas al crearla
+y no se pueden cambiar después. Sumar piedras con «+1» es lo único que hace falta durante la partida;
+para corregir un toque de más se toca el número y se escribe el que tocaba.
+
+La partida se cierra **sola** en cuanto una pareja llega a la meta (40 piedras por defecto, ajustable
+por partida), y a partir de ahí no admite más puntos: hay que **reabrirla** para seguir. Si al reabrir
+la pareja que iba ganando se queda con la puntuación tal cual, el primer punto que caiga —al bando que
+sea— la volvería a cerrar en el acto; hay que corregir su marcador hacia abajo antes de seguir sumando.
+
 ### Los gastos, al céntimo
 
-- Todo el dinero se guarda en **céntimos enteros**. 10 € entre 3 son 3,34 + 3,33 + 3,33, y la suma
-  de los repartos es **siempre** el importe exacto.
+- Todo el dinero se guarda en **céntimos enteros**, y la suma de los repartos es **siempre** el
+  importe exacto. Cuando no cae justo (110 € entre 6, por ejemplo), el céntimo de más se lo queda
+  quien pagó: el resto nunca debe de menos, pero tampoco paga más que los demás por culpa del
+  redondeo.
 - El saldo de cada uno es lo que ha pagado menos lo que le tocaba. La suma de todos los saldos es 0.
 - **Cómo quedar en paz**: la app calcula los pagos a partir del saldo **neto** de cada uno, así que
   si A le debe a B y B le debe a C, sale directamente «A le paga a C». Primero empareja deudas
@@ -103,12 +117,15 @@ npm run verify:migration  # que actualizar de versión deja el mismo esquema y n
 
 Algunas cosas que comprueban, porque son las que fallarían en silencio:
 
-- Que la copia cubre **todas** las tablas del esquema (con once, olvidar una al añadirla es fácil).
+- Que la copia cubre **todas** las tablas del esquema (con trece, olvidar una al añadirla es fácil).
 - Miles de repartos al azar: la suma es siempre el total y nadie se aleja más de un céntimo de su
   parte exacta.
 - 500 grupos con saldos al azar: tras los pagos sugeridos, **todos a cero** y nunca más de n−1
   pagos.
 - Veinte toques seguidos en «+1» suman veinte: la suma se hace en SQL, no leyendo y escribiendo.
+  El marcador del mus lo aprende por las malas: una primera versión con transacción (leer, sumar,
+  escribir) reventaba con `SQLITE_BUSY` al recibir toques a la vez; la versión buena es una única
+  sentencia `UPDATE` con `CASE`, sin transacción ni lectura previa.
 
 Esto es posible porque la lógica pide la base de datos a [`src/lib/dbRef.ts`](src/lib/dbRef.ts) en
 vez de crearla ella: [`src/lib/db.ts`](src/lib/db.ts) es el **único** fichero que toca
@@ -135,10 +152,12 @@ lleva `usesCleartextTraffic`.
 
 ```
 app/
-  (tabs)/             Sushi · Bebida · Gastos · Cuadrilla · Ajustes
+  (tabs)/             Sushi · Bebida · Mus · Gastos · Cuadrilla · Ajustes
   sushi/[id].tsx      una sesión de buffet, con los contadores
   sushi/edit.tsx      nueva sesión / editar fecha y sitio
   drinks/…            igual, para la bebida
+  mus/[id].tsx        una partida en vivo: marcador a dos bandas con «+1»
+  mus/edit.tsx        nueva partida (elegir parejas) / editar meta y nota
   group/[id].tsx      un grupo de gastos: Gastos | Saldos
   group/edit.tsx      nuevo grupo / nombre y miembros
   expense/edit.tsx    nuevo gasto / editar, con los tres modos de reparto
@@ -150,6 +169,7 @@ src/
     expenses.ts       grupos, gastos, saldos y pagos mínimos
     sushi.ts          sesiones, contadores y estadísticas
     drinks.ts         tipos, sesiones, contadores y estadísticas
+    mus.ts            partidas, marcador atómico en SQL y estadísticas
     people.ts         la cuadrilla
   hooks/              consultas reactivas (useLiveQuery)
   ui/                 tema y primitivas: nada de colores ni medidas a ojo fuera de theme.ts

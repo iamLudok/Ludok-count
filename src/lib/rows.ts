@@ -18,6 +18,7 @@ import type {
   GroupMember,
   Expense,
   ExpenseShare,
+  MusMatch,
   Settings,
 } from '../types'
 
@@ -152,11 +153,43 @@ export const shareToRow = (s: ExpenseShare): S.ExpenseShareRow => ({
   amount: s.amount,
 })
 
+export const rowToMusMatch = (r: S.MusMatchRow): MusMatch => ({
+  id: r.id,
+  date: r.date,
+  target: r.target,
+  team1Player1: r.team1Player1,
+  team1Player2: r.team1Player2,
+  team2Player1: r.team2Player1,
+  team2Player2: r.team2Player2,
+  team1Score: r.team1Score,
+  team2Score: r.team2Score,
+  winner: r.winner === 1 || r.winner === 2 ? r.winner : undefined,
+  note: u(r.note),
+  createdAt: r.createdAt,
+  finishedAt: u(r.finishedAt),
+})
+export const musMatchToRow = (m: MusMatch): S.MusMatchRow => ({
+  id: m.id,
+  date: m.date,
+  target: m.target,
+  team1Player1: m.team1Player1,
+  team1Player2: m.team1Player2,
+  team2Player1: m.team2Player1,
+  team2Player2: m.team2Player2,
+  team1Score: m.team1Score,
+  team2Score: m.team2Score,
+  winner: n(m.winner),
+  note: n(m.note),
+  createdAt: m.createdAt,
+  finishedAt: n(m.finishedAt),
+})
+
 export const rowToSettings = (r: S.SettingsRow): Settings => ({
   id: 'app',
   theme: r.theme,
   lastBackup: r.lastBackup,
   onboardedAt: u(r.onboardedAt),
+  mePersonId: u(r.mePersonId),
   nextcloudUrl: u(r.nextcloudUrl),
   nextcloudUser: u(r.nextcloudUser),
   nextcloudPassword: u(r.nextcloudPassword),
@@ -170,6 +203,7 @@ export const settingsToRow = (s: Settings): S.SettingsRow => ({
   theme: s.theme,
   lastBackup: s.lastBackup,
   onboardedAt: n(s.onboardedAt),
+  mePersonId: n(s.mePersonId),
   nextcloudUrl: n(s.nextcloudUrl),
   nextcloudUser: n(s.nextcloudUser),
   nextcloudPassword: n(s.nextcloudPassword),

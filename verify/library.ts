@@ -56,6 +56,17 @@ import {
   groupTotals,
 } from '../src/lib/expenses'
 import { rank } from '../src/lib/ranking'
+import {
+  createMusMatch,
+  updateMusMatch,
+  deleteMusMatch,
+  addMusPoint,
+  setMusScore,
+  reopenMusMatch,
+  musStatsByPerson,
+  ongoingMusMatches,
+  finishedMusMatches,
+} from '../src/lib/mus'
 
 let failures = 0
 function check(label: string, ok: boolean, detail = '') {
@@ -116,42 +127,90 @@ async function main() {
 
   console.log('\n=== 2. Repartos al céntimo ===')
   const tres = splitByWeights(1000, [1, 1, 1])
-  eq('10 € entre 3 = 3,34 + 3,33 + 3,33', tres.join(','), '334,333,333')
+  eq('sin pagador de favor: 10 € entre 3 = 3,34 + 3,33 + 3,33', tres.join(','), '334,333,333')
   eq('por partes 2:1 de 10 €', splitByWeights(1000, [2, 1]).join(','), '667,333')
   eq('peso 0 no paga nada', splitByWeights(1000, [1, 0, 1]).join(','), '500,0,500')
+
+  // Con `favor` (quien pagó), el sobrante nunca es para él: aquí el índice 0
+  // se queda con los 3,33 € redondeados hacia abajo, y el céntimo de más cae
+  // en el índice 1 (el siguiente por decimales), nunca en el 0.
+  eq('con pagador de favor: el 0 nunca sube', splitByWeights(1000, [1, 1, 1], 0).join(','), '333,334,333')
+  // 110 € entre 6: solo sobran 2 céntimos, así que solo dos personas los
+  // llevan — nunca quien pagó, esté donde esté en la lista.
+  const seis = splitByWeights(11000, [1, 1, 1, 1, 1, 1], 2)
+  eq('110 € entre 6, pagó el tercero: él nunca sube', seis[2], 1833)
+  eq('solo suben dos, los primeros por orden', seis.join(','), '1834,1834,1833,1833,1833,1833')
+  eq('la suma sigue siendo el total', seis.reduce((a, b) => a + b, 0), 11000)
+
   let exact = true
+  let payerNeverGainsExtra = true
   for (let total = 1; total < 3000; total += 7) {
     for (const w of [[1, 1, 1], [3, 1, 2], [1, 1, 1, 1, 1, 1, 1], [5, 7], [1]]) {
-      const parts = splitByWeights(total, w)
-      if (parts.reduce((a, b) => a + b, 0) !== total) exact = false
-      // Nadie se aleja más de un céntimo de su parte exacta.
       const sum = w.reduce((a, b) => a + b, 0)
-      if (parts.some((p, i) => Math.abs(p - (total * w[i]) / sum) >= 1)) exact = false
+      for (const favor of [undefined, ...w.map((_, i) => i)]) {
+        const parts = splitByWeights(total, w, favor)
+        if (parts.reduce((a, b) => a + b, 0) !== total) exact = false
+        // Nadie se aleja más de un céntimo de su parte exacta.
+        if (parts.some((p, i) => Math.abs(p - (total * w[i]) / sum) >= 1)) exact = false
+        // Con favor, esa persona nunca paga más que su parte exacta redondeada
+        // hacia abajo: el redondeo nunca la perjudica.
+        if (favor !== undefined && w[favor] > 0) {
+          if (parts[favor] > Math.floor((total * w[favor]) / sum)) payerNeverGainsExtra = false
+        }
+      }
     }
   }
   check('miles de repartos: la suma es siempre el total y nadie pierde más de 1 céntimo', exact)
+  check('y quien pagó nunca sube por el redondeo', payerNeverGainsExtra)
 
-  const eqShares = buildShares(1000, 'equal', [
-    { personId: 'a', value: 1 },
-    { personId: 'b', value: 1 },
-    { personId: 'c', value: 0 },
-  ])
+  const eqShares = buildShares(
+    1000,
+    'equal',
+    [
+      { personId: 'a', value: 1 },
+      { personId: 'b', value: 1 },
+      { personId: 'c', value: 0 },
+    ],
+    'a',
+  )
   eq('a partes iguales solo entre los marcados', eqShares.length, 2)
   eq('y cada uno 5 €', eqShares.map((s) => s.amount).join(','), '500,500')
   await rejects('importes que no suman el total', () =>
-    buildShares(1000, 'amounts', [
-      { personId: 'a', value: 400 },
-      { personId: 'b', value: 500 },
-    ]),
+    buildShares(
+      1000,
+      'amounts',
+      [
+        { personId: 'a', value: 400 },
+        { personId: 'b', value: 500 },
+      ],
+      'a',
+    ),
   )
-  await rejects('un gasto de 0 €', () => buildShares(0, 'equal', [{ personId: 'a', value: 1 }]))
-  await rejects('un reparto sin nadie', () => buildShares(1000, 'equal', [{ personId: 'a', value: 0 }]))
-  const dup = buildShares(900, 'equal', [
-    { personId: 'a', value: 1 },
-    { personId: 'a', value: 1 },
-    { personId: 'b', value: 1 },
-  ])
+  await rejects('un gasto de 0 €', () => buildShares(0, 'equal', [{ personId: 'a', value: 1 }], 'a'))
+  await rejects('un reparto sin nadie', () => buildShares(1000, 'equal', [{ personId: 'a', value: 0 }], 'a'))
+  const dup = buildShares(
+    900,
+    'equal',
+    [
+      { personId: 'a', value: 1 },
+      { personId: 'a', value: 1 },
+      { personId: 'b', value: 1 },
+    ],
+    'a',
+  )
   eq('alguien repetido en el formulario cuenta una vez', dup.length, 2)
+
+  // El caso que motivó todo esto: 110 € entre 6, pagados por Ane. Que quede
+  // claro que a ella nunca le toca pagar más que a los demás.
+  const win = buildShares(
+    11000,
+    'equal',
+    ['ane', 'iker', 'mikel', 'nerea', 'jon', 'ane2'].map((personId) => ({ personId, value: 1 })),
+    'ane',
+  )
+  const anePart = win.find((s) => s.personId === 'ane')!.amount
+  check('quien paga nunca debe más que el resto', win.every((s) => s.amount >= anePart))
+  eq('la suma sigue siendo 110 €', win.reduce((s, x) => s + x.amount, 0), 11000)
 
   console.log('\n=== 3. Saldar deudas: lo de «A le paga directamente a C» ===')
   // A le debe 10 a B, y B le debe 10 a C: B queda a cero y A le paga a C.
@@ -218,7 +277,9 @@ async function main() {
   await renamePerson(id('Iker'), 'Iker G.')
   eq('renombrar funciona', (await listPeople()).find((p) => p.id === id('Iker'))?.name, 'Iker G.')
   const typo = await addPerson('Mikle')
+  await updateSettings({ mePersonId: typo.id })
   eq('alguien sin historial se borra de verdad', await removePerson(typo.id), 'deleted')
+  eq('y si era «tú», deja de serlo', (await getSettings()).mePersonId, undefined)
 
   console.log('\n=== 6. Sushi ===')
   const s1 = await createSushiSession({ place: '  Sushi Bar ' }, [id('Ane'), id('Iker'), id('Iker')])
@@ -363,7 +424,86 @@ async function main() {
   eq('ni repartos', empty.expenseShares.length, 0)
   eq('ni miembros', empty.groupMembers.length, 0)
 
-  console.log('\n=== 9. Ajustes ===')
+  console.log('\n=== 9. Mus ===')
+  const musOf = async (id: string) => (await exportAll(getDb())).musMatches.find((m) => m.id === id)!
+  await rejects('parejas con alguien repetido entre equipos', () =>
+    createMusMatch({ target: 40, team1: [A, B], team2: [B, C] }),
+  )
+  await rejects('menos de cuatro personas distintas', () =>
+    createMusMatch({ target: 40, team1: [A, A], team2: [B, C] }),
+  )
+  await rejects('una meta de piedras inválida', () => createMusMatch({ target: 0, team1: [A, B], team2: [C, M] }))
+
+  // Partida corta (a 5) para no tener que darle al «+1» cuarenta veces.
+  const matchId = await createMusMatch({ target: 5, team1: [A, B], team2: [C, M] })
+  const fresh = await musOf(matchId)
+  eq('arranca 0 a 0', `${fresh.team1Score}-${fresh.team2Score}`, '0-0')
+  check('sin ganador todavía', fresh.winner === undefined)
+
+  // Veinte toques «a la vez», por lo mismo que los trozos de sushi: no pueden pisarse.
+  const other = await createMusMatch({ target: 999, team1: [A, B], team2: [C, M] })
+  await Promise.all(Array.from({ length: 20 }, () => addMusPoint(other, 1, 1)))
+  eq('20 toques seguidos = 20 piedras', (await musOf(other)).team1Score, 20)
+  await addMusPoint(other, 1, -100)
+  eq('nunca baja de 0', (await musOf(other)).team1Score, 0)
+
+  // Sumar hasta la meta cierra la partida sola.
+  await addMusPoint(matchId, 1, 3)
+  check('con 3 de 5 sigue en juego', (await musOf(matchId)).winner === undefined)
+  await addMusPoint(matchId, 1, 2)
+  const closed = await musOf(matchId)
+  eq('al llegar a la meta, gana el equipo 1', closed.winner, 1)
+  check('y queda fecha de cierre', closed.finishedAt !== undefined)
+
+  // Cerrada, no se puede seguir sumando: hay que reabrirla primero.
+  await addMusPoint(matchId, 2, 1)
+  eq('una partida cerrada no admite más puntos', (await musOf(matchId)).team2Score, 0)
+  await reopenMusMatch(matchId)
+  const reopened = await musOf(matchId)
+  check('reabrir quita el ganador', reopened.winner === undefined)
+  eq('pero no toca el marcador', reopened.team1Score, 5)
+
+  // El equipo 1 se quedó a la vista de la meta al reabrir: hay que corregirlo
+  // hacia abajo con `setMusScore` ANTES de seguir sumando, o el primer punto
+  // que caiga (al que sea) volvería a cerrarla en el acto.
+  await setMusScore(matchId, 1, 4)
+  check('corregir hacia abajo no cierra la partida', (await musOf(matchId)).winner === undefined)
+  await addMusPoint(matchId, 2, 1)
+  eq('ahora sí suma', (await musOf(matchId)).team2Score, 1)
+
+  // Corregir a mano también puede cerrar la partida, y a igualdad de piedras
+  // decide el equipo con más: aquí el equipo 2.
+  await setMusScore(matchId, 2, 5)
+  eq('corregir a mano hasta la meta cierra la partida', (await musOf(matchId)).winner, 2)
+
+  await updateMusMatch(matchId, { note: 'Con remontada' })
+  eq('se puede anotar cómo fue', (await musOf(matchId)).note, 'Con remontada')
+  await rejects('cambiar a una meta inválida', () => updateMusMatch(matchId, { target: -1 }))
+
+  const third = await createMusMatch({ target: 40, team1: [A, M], team2: [B, C] })
+  const ongoing = ongoingMusMatches((await exportAll(getDb())).musMatches)
+  check('las que siguen en juego no tienen ganador', ongoing.every((m) => !m.winner))
+  eq('están la nueva y la de prueba de toques, nada más', ongoing.length, 2)
+  eq('la última creada sale primero', ongoing[0]?.id, third)
+  const finished = finishedMusMatches((await exportAll(getDb())).musMatches)
+  eq('solo la de las parejas está cerrada', finished.map((m) => m.id).join(), matchId)
+
+  // team1=[A,M] gana esta: A y M suman una victoria más cada uno.
+  await addMusPoint(third, 1, 40)
+  const musStats = musStatsByPerson((await exportAll(getDb())).musMatches)
+  // matchId (C,M vs A,B) la ganó el equipo 2 → C y M ganan, A y B pierden.
+  // third (A,M vs B,C) la gana el equipo 1 → A y M ganan, B y C pierden.
+  eq('A: perdió una y ganó otra', `${musStats.get(A)?.wins}-${musStats.get(A)?.losses}`, '1-1')
+  eq('B: perdió las dos', `${musStats.get(B)?.wins}-${musStats.get(B)?.losses}`, '0-2')
+  eq('C: ganó una y perdió otra', `${musStats.get(C)?.wins}-${musStats.get(C)?.losses}`, '1-1')
+  eq('M: ganó las dos', `${musStats.get(M)?.wins}-${musStats.get(M)?.losses}`, '2-0')
+  eq('la media de M es del 100 %', musStats.get(M)?.winRate, 1)
+  check('la partida sin cerrar (other) no cuenta para nadie', musStats.get(A)?.matches === 2)
+
+  await deleteMusMatch(other)
+  check('borrar una partida la quita de verdad', !(await exportAll(getDb())).musMatches.some((m) => m.id === other))
+
+  console.log('\n=== 10. Ajustes ===')
   await updateSettings({ theme: 'light' })
   eq('se guarda el tema', (await getSettings()).theme, 'light')
   eq('y lo demás queda como estaba', (await getSettings()).lastBackup, 0)
