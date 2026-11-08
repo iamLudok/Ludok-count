@@ -1,191 +1,276 @@
+<div align="center">
+
+<img src="logo/count.svg" alt="Ludok Count logo" width="112">
+
 # Ludok Count
 
-App Android para la cuadrilla: **cuántos trozos de sushi se come cada uno en el buffet, quién bebe
-más en cada ronda y quién le debe cuánto a quién**, al estilo Tricount.
+**An Android app for your group of friends: sushi, drinks, mus and shared expenses.**
 
-La lleva una sola persona en su móvil y apunta por todos. Sin cuentas, sin servidores, sin que nadie
-tenga que instalarse nada.
+How many pieces of sushi each one eats at the buffet, who drinks the most each round, the mus
+scoreboard and who owes whom, Tricount-style.<br>
+One person runs it on their phone and logs for everyone. No accounts, no servers, nobody else has
+to install anything.
 
-React Native con Expo SDK 57.
+[![License: MIT](https://img.shields.io/github/license/iamLudok/Ludok-count?style=flat-square&color=blue&label=license)](LICENSE)
+[![Android](https://img.shields.io/badge/Android-3DDC84?style=flat-square&logo=android&logoColor=white)](https://www.android.com/)
+[![Expo SDK 57](https://img.shields.io/badge/Expo-SDK%2057-000020?style=flat-square&logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
+[![React Native 0.86](https://img.shields.io/badge/React%20Native-0.86-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 
-## Lo que manda: no perder datos nunca
+[Features](#what-it-tracks) · [Installation](#installation) · [Backups](#automatic-backup-to-nextcloud) · [Contributing](#contributing) · [License](#license)
 
-Todo lo demás va después.
+<br>
 
-- Los datos viven en `/data/data/com.ludok.count/`. No hay cuentas ni servidores.
-- Copia de seguridad en JSON, exportable e importable en cualquier momento.
-- **Copia automática a un Nextcloud propio** al abrir y al cerrar la app estando en WiFi, un fichero
-  por día.
-- Aviso en cada pestaña cuando lleva mucho sin copia.
-- La capa de datos **se prueba de verdad**, no solo con tipos (ver más abajo).
+<img src="docs/screenshots/sushi.webp" alt="Sushi: the all-time record and the ranking by average pieces per session" width="260">
 
-## Qué se registra
+<sub>Sushi ranking</sub>
 
-| Apartado | Qué | Detalle |
+</div>
+
+---
+
+## Table of Contents
+
+- [The Rule: Never Lose Data](#the-rule-never-lose-data)
+- [What It Tracks](#what-it-tracks)
+- [Installation](#installation)
+- [Building an APK](#building-an-apk)
+- [Verifying the Data Layer](#verifying-the-data-layer)
+- [Automatic Backup to Nextcloud](#automatic-backup-to-nextcloud)
+- [Structure](#structure)
+- [Design](#design)
+- [Contributing](#contributing)
+- [License](#license)
+
+## The Rule: Never Lose Data
+
+Everything else comes second.
+
+- Data lives in `/data/data/com.ludok.count/`. There are no accounts and no servers.
+- JSON backups you can export and import at any time.
+- **Automatic backup to your own Nextcloud** when you open or close the app on WiFi, one file per
+  day.
+- A warning on every tab when it's been too long without a backup.
+- The data layer is **actually tested**, not just type-checked (see below).
+
+> **What leaves your phone:** nothing, unless you set up the Nextcloud backup. If you do, the
+> backup goes straight to your server and nowhere else.
+
+## What It Tracks
+
+| Section | What | Details |
 |---|---|---|
-| Cuadrilla | La gente | Se añade, se renombra y se archiva. Quien deja de venir no se borra: su historial sigue contando |
-| Sushi | Sesiones de buffet | Cada día, quién fue y cuántos trozos se comió cada uno. Clasificación por media, total y mejor día; récord absoluto |
-| Bebida | Sesiones de bebida | Contador por persona **y por tipo** (chupito, cerveza, cubata…, editables). Botón de «ronda para todos» |
-| Gastos | Grupos de gastos | Quién paga qué y entre quién se reparte: a partes iguales, por partes o por importes exactos. Saldos y pagos mínimos para quedar en paz |
-| Mus | Partidas por parejas | Marcador en vivo a dos bandas (2 contra 2), con «+1» por pareja y meta de piedras configurable (40 por defecto). Se cierra sola al llegar a la meta; historial y clasificación por partidas ganadas |
+| Group | The people | Add, rename and archive them. Someone who stops coming isn't deleted: their history still counts |
+| Sushi | Buffet sessions | Each day, who went and how many pieces each one ate. Ranking by average, total and best day; all-time record |
+| Drinks | Drinking sessions | A counter per person **and per type** (shot, beer, mixed drink…, editable). A "round for everyone" button |
+| Expenses | Expense groups | Who pays what and who it's split between: equally, by shares or by exact amounts. Balances and the fewest payments to settle up |
+| Mus | Games between pairs | Live two-sided scoreboard (2 vs 2), with "+1" per pair and an adjustable target (40 by default). Closes itself when a pair reaches the target; history and ranking by games won |
 
-### No todos van el mismo día
+The app's interface is in Spanish.
 
-Cada sesión tiene sus asistentes. Que alguien **esté** en una sesión es lo que dice que fue; por eso
-«fue y comió 0» no es lo mismo que «no fue», y no ir **no baja la media**. La clasificación de sushi
-va por media por defecto justamente por esto: el total premia a quien más veces va, no a quien más
-come.
+### Not everyone goes every day
 
-### El mus, por parejas fijas
+Each session has its own attendees. Being **in** a session is what says someone went; that's why
+"went and ate 0" isn't the same as "didn't go", and not going **doesn't lower your average**. The
+sushi ranking sorts by average by default for exactly this reason: the total rewards whoever goes
+most often, not whoever eats the most.
 
-Cada partida enfrenta a dos parejas de siempre (2 contra 2): se eligen las cuatro personas al crearla
-y no se pueden cambiar después. Sumar piedras con «+1» es lo único que hace falta durante la partida;
-para corregir un toque de más se toca el número y se escribe el que tocaba.
+### Mus, with fixed pairs
 
-La partida se cierra **sola** en cuanto una pareja llega a la meta (40 piedras por defecto, ajustable
-por partida), y a partir de ahí no admite más puntos: hay que **reabrirla** para seguir. Si al reabrir
-la pareja que iba ganando se queda con la puntuación tal cual, el primer punto que caiga —al bando que
-sea— la volvería a cerrar en el acto; hay que corregir su marcador hacia abajo antes de seguir sumando.
+Each game pits two fixed pairs against each other (2 vs 2): you pick the four people when creating
+it and they can't be changed later. Adding points with "+1" is all you need during the game; to fix
+an extra tap, tap the number and type the right one.
 
-### Los gastos, al céntimo
+The game closes **by itself** as soon as a pair reaches the target (40 by default, adjustable per
+game), and from then on it accepts no more points: you have to **reopen** it to continue. If, on
+reopening, the leading pair keeps its score as is, the next point scored (by either side) would
+close it again immediately; lower their score before carrying on.
 
-- Todo el dinero se guarda en **céntimos enteros**, y la suma de los repartos es **siempre** el
-  importe exacto. Cuando no cae justo (110 € entre 6, por ejemplo), el céntimo de más se lo queda
-  quien pagó: el resto nunca debe de menos, pero tampoco paga más que los demás por culpa del
-  redondeo.
-- El saldo de cada uno es lo que ha pagado menos lo que le tocaba. La suma de todos los saldos es 0.
-- **Cómo quedar en paz**: la app calcula los pagos a partir del saldo **neto** de cada uno, así que
-  si A le debe a B y B le debe a C, sale directamente «A le paga a C». Primero empareja deudas
-  exactas (un pago deja a dos a cero) y luego el que más debe le paga al que más le deben. Salen
-  como mucho n−1 pagos.
-- Al pulsar **Pagado**, se apunta un reembolso: es un gasto más (paga uno, «consume» el otro), que
-  es lo que hace que el balance cuadre sin casos especiales.
-- A quien ya sale en gastos de un grupo no se le puede sacar del grupo: su deuda quedaría huérfana.
+### Expenses, to the cent
 
-## Arranque
+- All money is stored as **whole cents**, and the split always adds up to **exactly** the amount.
+  When it doesn't divide evenly (110 € among 6, for example), the extra cent goes to whoever paid:
+  nobody else ever owes too little, but nobody pays more than the others because of rounding
+  either.
+- Each person's balance is what they paid minus their share. All balances add up to 0.
+- **Settling up**: the app works out payments from each person's **net** balance, so if A owes B
+  and B owes C, you directly get "A pays C". It first matches exact debts (one payment clears two
+  people) and then the biggest debtor pays the biggest creditor. That gives at most n−1 payments.
+- Tapping **Pagado** (paid) records a reimbursement: just another expense (one pays, the other
+  "consumes"), which is what makes the balance add up without special cases.
+- Someone who already appears in a group's expenses can't be removed from it: their debt would be
+  left orphaned.
+
+## Installation
+
+### From an APK
+
+Download the APK from the [latest release](https://github.com/iamLudok/Ludok-count/releases/latest)
+and install it on your phone (Android will ask you to allow installing apps from that source).
+
+### From source
+
+You need Node 22, JDK 17, the Android SDK with API 36, and `adb`.
 
 ```bash
+git clone https://github.com/iamLudok/Ludok-count.git
+cd Ludok-count
 npm install
-npm run android      # instala y abre en un móvil conectado por adb
-npm run typecheck    # tipos de la app y de los scripts de verificación
-npm run verify       # comprueba la capa de datos
+npm run android      # installs and opens it on a phone connected over adb
+npm run typecheck    # types for the app and the verification scripts
+npm run verify       # checks the data layer
 ```
 
-Hace falta JDK 17, Android SDK con API 36 y `adb`.
-
-> Gradle pide un toolchain de **Java 17**. Si falla con «Cannot find a Java installation matching
-> languageVersion=17» teniendo un JDK más nuevo, apunta al que Gradle ya se descargó:
+> Gradle needs a **Java 17** toolchain. If it fails with "Cannot find a Java installation matching
+> languageVersion=17" while you have a newer JDK, point it to the one Gradle already downloaded:
 >
 > ```bash
 > export JAVA_HOME=~/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2
 > ```
 
-## Compilar un APK
+## Building an APK
+
+The first time, create your own keystore at the project root:
 
 ```bash
-npm run build:apk                    # todas las arquitecturas
-./scripts/build-apk.sh --compartir   # solo arm64-v8a, para repartir
+keytool -genkeypair -v -keystore release.jks -alias ludok -keyalg RSA -keysize 2048 -validity 10000
+```
+
+And a `keystore.properties` next to it:
+
+```properties
+storeFile=release.jks
+storePassword=your-password
+keyAlias=ludok
+keyPassword=your-password
+```
+
+Both are in `.gitignore`. Then:
+
+```bash
+npm run build:apk                    # all architectures
+./scripts/build-apk.sh --compartir   # arm64-v8a only, for sharing
 # → android/app/build/outputs/apk/release/app-release.apk
 ```
 
-Tiene que ser **release**, no debug: en debug el JavaScript no va dentro del APK, se carga del
-servidor de Metro, así que un APK de debug no funciona sin el ordenador delante.
+It has to be a **release** build, not debug: in debug the JavaScript isn't bundled in the APK, it's
+loaded from the Metro server, so a debug APK doesn't work without your computer.
 
-Instalar: `adb install -r app-release.apk`. Con `-r` se instala **encima** conservando los datos,
-siempre que la firma sea la misma.
+Install: `adb install -r app-release.apk`. With `-r` it installs **on top** and keeps the data, as
+long as the signature is the same.
 
-### ⚠️ El keystore hay que guardarlo como oro
+> [!WARNING]
+> **Guard the keystore with your life.** Android only installs an APK on top of another if both
+> are signed with the same key. If it's lost, the only way to install a new version is to
+> **uninstall**, and uninstalling **deletes the app's data**. Keep it next to your backups. It's
+> the one thing in this project that can't be regenerated.
 
-La firma vive en `release.jks` + `keystore.properties`, los dos fuera del repo (en `.gitignore`).
+## Verifying the Data Layer
 
-Android solo deja instalar un APK **encima** de otro si van firmados con la misma clave. Si se
-pierden, la única salida es **desinstalar** para poner la versión nueva — y desinstalar **borra los
-datos de la app**.
-
-Guárdalos junto a las copias de seguridad. Es lo único de este proyecto que no se puede regenerar.
-
-## Verificación de la capa de datos
-
-Los datos son la parte que no puede fallar, así que se prueban ejecutando **el mismo código que
-corre en el móvil** contra un SQLite de escritorio:
+Data is the part that can't fail, so it's tested by running **the same code that runs on the
+phone** against a desktop SQLite:
 
 ```bash
-npm run verify:data       # copia: ida y vuelta de las 11 tablas, huecos, volumen, rechazos, contraseña fuera
-npm run verify:library    # reglas: dinero, repartos, saldar deudas, sushi, bebida, cuadrilla
-npm run verify:migration  # que actualizar de versión deja el mismo esquema y no pierde nada
+npm run verify:data       # backup: round trip of every table, gaps, volume, rejections, password left out
+npm run verify:library    # rules: money, splits, settling debts, sushi, drinks, group
+npm run verify:migration  # upgrading leaves the same schema and loses nothing
 ```
 
-Algunas cosas que comprueban, porque son las que fallarían en silencio:
+Some of the things they check, because they're the ones that would fail silently:
 
-- Que la copia cubre **todas** las tablas del esquema (con trece, olvidar una al añadirla es fácil).
-- Miles de repartos al azar: la suma es siempre el total y nadie se aleja más de un céntimo de su
-  parte exacta.
-- 500 grupos con saldos al azar: tras los pagos sugeridos, **todos a cero** y nunca más de n−1
-  pagos.
-- Veinte toques seguidos en «+1» suman veinte: la suma se hace en SQL, no leyendo y escribiendo.
-  El marcador del mus lo aprende por las malas: una primera versión con transacción (leer, sumar,
-  escribir) reventaba con `SQLITE_BUSY` al recibir toques a la vez; la versión buena es una única
-  sentencia `UPDATE` con `CASE`, sin transacción ni lectura previa.
+- The backup covers **every** table in the schema (with thirteen, forgetting one when adding it is
+  easy).
+- Thousands of random splits: the sum is always the total and nobody is more than one cent away
+  from their exact share.
+- 500 groups with random balances: after the suggested payments, **everyone is at zero** and never
+  more than n−1 payments.
+- Twenty "+1" taps in a row add up to twenty: the sum happens in SQL, not by reading and writing.
+  The mus scoreboard learned this the hard way: a first version with a transaction (read, add,
+  write) blew up with `SQLITE_BUSY` when taps arrived at the same time; the good version is a
+  single `UPDATE` statement with `CASE`, with no transaction and no prior read.
 
-Esto es posible porque la lógica pide la base de datos a [`src/lib/dbRef.ts`](src/lib/dbRef.ts) en
-vez de crearla ella: [`src/lib/db.ts`](src/lib/db.ts) es el **único** fichero que toca
-`expo-sqlite`.
+This works because the logic gets its database from [`src/lib/dbRef.ts`](src/lib/dbRef.ts) instead
+of creating it: [`src/lib/db.ts`](src/lib/db.ts) is the **only** file that touches `expo-sqlite`.
 
-Se usa **libsql** y no `better-sqlite3` porque este último es sincrónico y no admite transacciones
-asíncronas, mientras que `expo-sqlite` sí: con libsql la semántica coincide con la real.
+It uses **libsql** rather than `better-sqlite3` because the latter is synchronous and doesn't
+support async transactions, while `expo-sqlite` does: with libsql the semantics match the real
+thing.
 
-## Copia automática a Nextcloud
+## Automatic Backup to Nextcloud
 
-En **Ajustes → Copia automática a Nextcloud**: dirección, usuario, contraseña y carpeta. Al abrir o
-cerrar la app estando en WiFi sube sola, como mucho una vez cada 12 horas, con un fichero por día.
+In **Ajustes → Copia automática a Nextcloud**: address, user, password and folder. When you open or
+close the app on WiFi it uploads on its own, at most once every 12 hours, with one file per day.
 
-Usa una **contraseña de aplicación** de Nextcloud (Ajustes personales → Seguridad), no la de la
-cuenta: se revoca sola. Esa contraseña **no se incluye nunca** en las copias exportadas.
+Use a Nextcloud **app password** (Personal settings → Security), not your account password: it can
+be revoked on its own. That password is **never included** in exported backups.
 
-No es una tarea en segundo plano: Android las mata sin avisar y encima no se ve si funcionan. Si la
-copia automática lleva más de 4 días sin llegar, sale un aviso.
+It isn't a background task: Android kills them without warning, and you couldn't even tell whether
+they work. If the automatic backup hasn't arrived for more than 4 days, a warning shows up.
 
-Un Nextcloud casero suele ir por `http://`, que Android bloquea por defecto: por eso `app.json`
-lleva `usesCleartextTraffic`.
+A home Nextcloud usually runs over `http://`, which Android blocks by default: that's why
+`app.json` sets `usesCleartextTraffic`. Use HTTPS or a VPN if your server is reachable from outside.
 
-## Estructura
+## Structure
 
 ```
 app/
   (tabs)/             Sushi · Bebida · Mus · Gastos · Cuadrilla · Ajustes
-  sushi/[id].tsx      una sesión de buffet, con los contadores
-  sushi/edit.tsx      nueva sesión / editar fecha y sitio
-  drinks/…            igual, para la bebida
-  mus/[id].tsx        una partida en vivo: marcador a dos bandas con «+1»
-  mus/edit.tsx        nueva partida (elegir parejas) / editar meta y nota
-  group/[id].tsx      un grupo de gastos: Gastos | Saldos
-  group/edit.tsx      nuevo grupo / nombre y miembros
-  expense/edit.tsx    nuevo gasto / editar, con los tres modos de reparto
-  person/[id].tsx     ficha de alguien: sus números en todo
+  sushi/[id].tsx      a buffet session, with the counters
+  sushi/edit.tsx      new session / edit date and place
+  drinks/…            the same, for drinks
+  mus/[id].tsx        a live game: two-sided scoreboard with "+1"
+  mus/edit.tsx        new game (pick the pairs) / edit target and note
+  group/[id].tsx      an expense group: Expenses | Balances
+  group/edit.tsx      new group / name and members
+  expense/edit.tsx    new expense / edit, with the three split modes
+  person/[id].tsx     someone's page: their numbers across everything
 src/
-  types.ts            modelo de dominio y forma del fichero de copia
-  lib/                datos y reglas, sin nada nativo salvo db.ts, backup.ts, autoBackup.ts
-    money.ts          céntimos, leer/escribir importes, repartir sin perder céntimos
-    expenses.ts       grupos, gastos, saldos y pagos mínimos
-    sushi.ts          sesiones, contadores y estadísticas
-    drinks.ts         tipos, sesiones, contadores y estadísticas
-    mus.ts            partidas, marcador atómico en SQL y estadísticas
-    people.ts         la cuadrilla
-  hooks/              consultas reactivas (useLiveQuery)
-  ui/                 tema y primitivas: nada de colores ni medidas a ojo fuera de theme.ts
-  components/         piezas con lógica propia (bienvenida, clasificación, Nextcloud…)
-verify/               pruebas de la capa de datos contra un SQLite de escritorio
+  types.ts            domain model and backup file shape
+  lib/                data and rules, nothing native except db.ts, backup.ts, autoBackup.ts
+    money.ts          cents, parsing/formatting amounts, splitting without losing cents
+    expenses.ts       groups, expenses, balances and minimal payments
+    sushi.ts          sessions, counters and stats
+    drinks.ts         types, sessions, counters and stats
+    mus.ts            games, atomic SQL scoreboard and stats
+    people.ts         the group
+  hooks/              reactive queries (useLiveQuery)
+  ui/                 theme and primitives: no eyeballed colors or sizes outside theme.ts
+  components/         pieces with their own logic (welcome, ranking, Nextcloud…)
+verify/               data layer tests against a desktop SQLite
 ```
 
-## La dirección de diseño
+## Design
 
-«Sala oscura», como las demás Ludok: interfaz **monocroma**, sin color de acento; la jerarquía la
-marca el contraste. Aquí no hay carátulas ni fotos, así que lo que destaca son las **cifras**: el
-contador grande de cada persona y los saldos.
+"Sala oscura" (dark room), like the other Ludok apps: a **monochrome** interface with no accent
+color; hierarchy comes from contrast. There are no posters or photos here, so what stands out are
+the **numbers**: each person's big counter and the balances.
 
-El color solo aparece con significado: rojo para borrar, ámbar para los avisos de copia, y **verde
-/ naranja** para «le deben» / «debe» en los saldos, que es el único sitio donde el color es el dato.
+Color only appears when it means something: red for deleting, amber for backup warnings, and
+**green / orange** for "is owed" / "owes" in the balances, the only place where color is the data.
 
-Los contadores están pensados para usarse en la mesa: el «+» es grande y sólido, el «−» pequeño y
-solo con borde, y la lista **no se reordena** mientras se suma (si no, la tarjeta se movería debajo
-del dedo). Tocar el número deja corregirlo a mano.
+The counters are designed to be used at the table: the "+" is big and solid, the "−" small and
+outlined, and the list **doesn't reorder** while you add (otherwise the card would move under your
+finger). Tapping the number lets you correct it by hand.
+
+## Contributing
+
+Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and
+conventions. To report a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of
+opening a public issue.
+
+## License
+
+Distributed under the **MIT License**: you can use, modify and redistribute it, including for
+commercial purposes, as long as you keep the copyright notice. See [LICENSE](LICENSE) for the full
+text.
+
+---
+
+<div align="center">
+
+Made by [Luken Iriondo](https://github.com/iamLudok) · If Ludok Count is useful to you, consider giving it a ⭐
+
+🇪🇸 [En castellano](https://iamludok.github.io/ludok-apps-web/apps/count/)
+
+</div>
